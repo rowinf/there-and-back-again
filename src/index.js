@@ -4,7 +4,7 @@ import './index.css';
 // import App from './App';
 import * as serviceWorker from './serviceWorker';
 import mapboxgl from 'mapbox-gl'; // or "const mapboxgl = require('mapbox-gl');"
-
+import geojson from "./sa2-centroids-ext.json";
 // ReactDOM.render(
 //   <React.StrictMode>
 //     <App />
@@ -20,6 +20,11 @@ const map = new mapboxgl.Map({
   center: [174.6214276,-41.2442847], // starting position [lng, lat]
   zoom: 9 // starting zoom
 });
+geojson.features.forEach(feature => {
+  let marker = new mapboxgl.Marker()
+  .setLngLat(feature.geometry.coordinates)
+  .addTo(map);
+})
 
 // If you want your app to work offline and load faster, you can change
 // unregister() to register() below. Note this comes with some pitfalls.
