@@ -9,10 +9,13 @@
     "mapbox-gl": "^1.11.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.1"
+    "react-mapbox-gl": "^4.8.6",
+    "react-scripts": "3.4.1",
+    "react-transition-group": "^4.4.1"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "build:style": "tailwind build src/styles/index.css -o src/styles/tailwind.css",
+    "start": "npm run build:style && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -33,6 +36,9 @@
     ]
   },
   "devDependencies": {
-    "dotenv-safe": "^8.2.0"
+    "autoprefixer": "^9.8.5",
+    "dotenv-safe": "^8.2.0",
+    "postcss-cli": "^7.1.1",
+    "tailwindcss": "^1.4.6"
   }
 }
