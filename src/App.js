@@ -75,7 +75,7 @@ function App() {
             'fill-color': [
               'case',
               ['boolean', ['feature-state', 'hover'], false],
-              'rgba(98,123,193,0.9)',
+              'rgba(98,123,193,0.1)',
               'rgba(0,0,0,0)'
             ]
           }
@@ -103,13 +103,20 @@ function App() {
             return (feat.properties.sa22018_v1 === Number(SA22018_V1_00))
           }).map(edge => ({
               total: edge.properties.total,
+              workAtHome: edge.properties.work_at_ho,
               name: sa2NameLookup[edge.properties.sa2_code_w]
           }))
-          let total = edges.reduce((acc, edge) => {
-            return acc + edge.total
+          let totaler = (attr) => collection => collection.reduce((acc, edge) => {
+            if (edge[attr] === -999) {
+              return acc
+            }
+            return acc + edge[attr]
           }, 0)
+          edges.sort((a, b) => b.total - a.total)
+          let total = totaler('total')(edges)
+          let workAtHome = totaler('workAtHome')(edges)
           setFeatures(edges)
-          setActiveFeature({name: sa2NameLookup[SA22018_V1_00], total})
+          setActiveFeature({name: sa2NameLookup[SA22018_V1_00], total, workAtHome})
         }
       });
     }, []);
@@ -160,13 +167,26 @@ function App() {
         'filter': ['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]
       });
       mapRef.current.addLayer({
+        id: `${activeFeatureId}-label`,
+        type: 'symbol',
+        source: 'graph',
+        'layout': {
+          'symbol-placement': 'line',
+          'text-field': ['get', ['to-string', ['get', 'sa2_code_w']], ['literal', sa2NameLookup]]
+        },
+        'paint': {
+          'text-color': 'rgba(232, 232, 192, 0.9)',
+        },
+        'filter': ['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]
+      });
+      mapRef.current.addLayer({
         'id': `${activeFeatureId}-fill`,
         'type': 'fill',
         'source': 'rowinf-data',
         'source-layer': 'data',
         'paint': {
           'fill-color': '#f28cb1',
-          'fill-opacity': 0.75
+          'fill-opacity': 0.1
         },
         'filter': ['==', 'SA22018_V1_00', activeFeatureId]
       });
@@ -177,6 +197,9 @@ function App() {
       }
       if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-fill`)) {
         mapRef.current.removeLayer(`${activeFeatureId}-fill`)
+      }
+      if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-label`)) {
+        mapRef.current.removeLayer(`${activeFeatureId}-label`)
       }
     }
   }, [activeFeatureId, loaded]);
