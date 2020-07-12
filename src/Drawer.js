@@ -1,14 +1,24 @@
 import React from 'react';
 
 const Drawer = ({ activeFeature, features }) => {
+  let headRows = []
+  let bodyRows = []
+  activeFeature.totals.forEach((cells, i) => {
+    let row = (
+      <tr key={i}>
+        {cells.map((cell, j) => { return i === 0 ? <th key={j}>{cell}</th> : <td key={j}>{cell}</td>} )}
+      </tr>
+    )
+    if (i === 0) { headRows.push(row) }
+    else { bodyRows.push(row) }
+  })
   return (
     <div className="text-white overflow-y-auto">
       <div className="m-2 my-4">
-        <h4>
-          {activeFeature.name}
-        </h4>
-        <p>Census total: {activeFeature.total}</p>
-        <p>work at home: {activeFeature.workAtHome}</p>
+        <table>
+          <thead>{headRows}</thead>
+          <tbody>{bodyRows}</tbody>
+        </table>
       </div>
       <div className="m-2 h-64 overflow-y-auto">
         {!features.length && 'No commuters in the provided data'}

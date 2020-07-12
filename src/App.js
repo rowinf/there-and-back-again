@@ -102,9 +102,8 @@ function App() {
           let edges = features.filter(feat => {
             return (feat.properties.sa22018_v1 === Number(SA22018_V1_00))
           }).map(edge => ({
-              total: edge.properties.total,
-              workAtHome: edge.properties.work_at_ho,
-              name: sa2NameLookup[edge.properties.sa2_code_w]
+            name: sa2NameLookup[edge.properties.sa2_code_w],
+            ...edge.properties,
           }))
           let totaler = (attr) => collection => collection.reduce((acc, edge) => {
             if (edge[attr] === -999) {
@@ -113,10 +112,22 @@ function App() {
             return acc + edge[attr]
           }, 0)
           edges.sort((a, b) => b.total - a.total)
-          let total = totaler('total')(edges)
-          let workAtHome = totaler('workAtHome')(edges)
+          let name = sa2NameLookup[SA22018_V1_00]
+          let totals = [
+            [name, 'Total'],
+            ['Census Total', totaler('total')(edges)],
+            ['Work at home', totaler('work_at_ho')(edges)],
+            ['Walk or jog', totaler('walk_or_jo')(edges)],
+            ['Train', totaler('train')(edges)],
+            ['Public bus', totaler('public_bus')(edges)],
+            ['Passenger', totaler('passenger_')(edges)],
+            ['ferry', totaler('ferry')(edges)],
+            ['Private Car', totaler('drive_a_pr')(edges)],
+            ['Bicycle', totaler('bicycle')(edges)],
+            ['Other', totaler('other')(edges)],
+          ]
           setFeatures(edges)
-          setActiveFeature({name: sa2NameLookup[SA22018_V1_00], total, workAtHome})
+          setActiveFeature({name, totals})
         }
       });
     }, []);
