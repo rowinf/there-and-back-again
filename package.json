@@ -7,13 +7,19 @@
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
     "@turf/turf": "^5.1.6",
+    "classnames": "^2.2.6",
+    "echarts": "^4.8.0",
+    "echarts-for-react": "^2.0.16",
     "mapbox-gl": "^1.11.0",
-    "rc-collapse": "^2.0.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-mapbox-gl": "^4.8.6",
     "react-scripts": "3.4.1",
-    "react-transition-group": "^4.4.1"
+    "react-transition-group": "^4.4.1",
+    "autoprefixer": "^9.8.5",
+    "dotenv-safe": "^8.2.0",
+    "postcss-cli": "^7.1.1",
+    "tailwindcss": "^1.4.6"
   },
   "scripts": {
     "build:style": "tailwind build src/styles/index.css -o src/styles/tailwind.css",
@@ -36,11 +42,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "autoprefixer": "^9.8.5",
-    "dotenv-safe": "^8.2.0",
-    "postcss-cli": "^7.1.1",
-    "tailwindcss": "^1.4.6"
   }
 }
