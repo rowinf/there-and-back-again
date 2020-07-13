@@ -17,7 +17,7 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
       row.forEach((cells, i) => {
         let row = (
           <tr key={i}>
-            {cells.map((cell, j) => { return i === 0 ? <th key={j}>{cell}</th> : <td key={j}>{cell === 0 ? '-' : cell}</td>} )}
+            {cells.map((cell, j) => { return i === 0 ? <th key={j} className="border border-gray-200 px-4 py-2">{cell}</th> : <td key={j} className="border border-gray-200 px-4 py-2">{cell === 0 ? '-' : cell}</td>} )}
           </tr>
         )
         if (i === 0) { headRows.push(row); }
@@ -54,15 +54,15 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
           </form>
         </div>
         <div className="flex-auto my-4">
-          <button className={clx("font-bold py-2 px-4 rounded hover:bg-blue-700", {'bg-transparent': expanded, 'bg-blue-500': !expanded})} onClick={() => setExpanded(false)}>chart</button>
-          <button className={clx("font-bold py-2 px-4 mx-4 rounded hover:bg-blue-700", {'bg-transparent': !expanded, 'bg-blue-500': expanded})} onClick={() => setExpanded(true)}>data</button>
+          <button className={clx("font-bold py-2 px-4 rounded hover:bg-blue-700", {'bg-transparent': expanded, 'bg-blue-500': !expanded})} onClick={() => setExpanded(false)}>Chart</button>
+          <button className={clx("font-bold py-2 px-4 mx-4 rounded hover:bg-blue-700", {'bg-transparent': !expanded, 'bg-blue-500': expanded})} onClick={() => setExpanded(true)}>Data Tables</button>
         </div>
         <div className="flex-initial">
         {
           expanded ? (
             <>
             {tableTotals.map(([header, body], i) =>
-              <table className="table-auto" key={i}>
+              <table className="border-collapse table-auto border-2 border-gray-100 my-2" key={i}>
                 <thead>{header}</thead>
                 <tbody>{body}</tbody>
               </table>
