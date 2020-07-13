@@ -1,15 +1,22 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import ReactMapboxGl from "react-mapbox-gl";
+import ReactMapboxGl, { Layer, GeoJSONLayer } from "react-mapbox-gl";
 import { Transition } from 'react-transition-group';
+import circle from '@turf/circle'
 
 import logo from './logo.svg';
 import './App.css';
 import commuterGraph from './commuter_graph.json';
 import centroids from './sa2-centroids-ext.json';
 import { Drawer } from './Drawer';
+import { FetchJson } from './FetchJson';
 
 const sa2NameLookup = centroids.features.reduce((acc, centroid) => {
   acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
+  return acc
+}, {})
+
+const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
+  acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
   return acc
 }, {})
 
@@ -47,11 +54,17 @@ function App() {
   let [activeFeatureId, setActiveFeatureId] = useState();
   let [activeFeature, setActiveFeature] = useState();
   let [hoverFeatureId, setHoverFeatureId] = useState();
+  let [walkCircle, setWalkCircle] = useState();
+  let [bikeCircle, setBikeCircle] = useState();
+  let [eBikeCircle, setEBikeCircle] = useState();
+  let [walkRadius] = useState(1.5);
+  let [bikeRadius] = useState(4);
+  let [eBikeRadius] = useState(10);
   let [features, setFeatures] = useState([]);
-  let [drawer, setDrawer]= useState(false)
-  let [zoom, setZoom] = useState([9])
-  let [center, setCenter] = useState([174.3130,-36.5949])
-  let mapRef = useRef()
+  let [drawer, setDrawer]= useState(false);
+  let [zoom, setZoom] = useState([9]);
+  let [center, setCenter] = useState([174.3130,-36.5949]);
+  let mapRef = useRef();
   let onMapLoad = useCallback((map) => {
       setLoaded(true);
       mapRef.current = map;
@@ -96,41 +109,94 @@ function App() {
           let [feat] = efeatures;
           let { properties } = feat;
           let { SA22018_V1_00 } = properties;
-          setDrawer(true);
-          setActiveFeatureId(SA22018_V1_00);
           let {features} = commuterGraph;
           let edges = features.filter(feat => {
-            return (feat.properties.sa22018_v1 === Number(SA22018_V1_00))
+            return (feat.properties.sa22018_v1 === Number(SA22018_V1_00)) || (feat.properties.sa2_code_w === Number(SA22018_V1_00))
           }).map(edge => ({
             name: sa2NameLookup[edge.properties.sa2_code_w],
             ...edge.properties,
-          }))
-          let totaler = (attr) => collection => collection.reduce((acc, edge) => {
-            if (edge[attr] === -999) {
-              return acc
+          }));
+          let outtotaler = (attr) => collection => collection.reduce((acc, edge) => {
+            if (edge[attr] === -999 || edge.sa2_code_w === Number(SA22018_V1_00)) {
+              return acc;
             }
-            return acc + edge[attr]
-          }, 0)
-          edges.sort((a, b) => b.total - a.total)
-          let name = sa2NameLookup[SA22018_V1_00]
-          let totals = [
-            [name, 'Total'],
-            ['Census Total', totaler('total')(edges)],
-            ['Work at home', totaler('work_at_ho')(edges)],
-            ['Walk or jog', totaler('walk_or_jo')(edges)],
-            ['Train', totaler('train')(edges)],
-            ['Public bus', totaler('public_bus')(edges)],
-            ['Passenger', totaler('passenger_')(edges)],
-            ['ferry', totaler('ferry')(edges)],
-            ['Private Car', totaler('drive_a_pr')(edges)],
-            ['Bicycle', totaler('bicycle')(edges)],
-            ['Other', totaler('other')(edges)],
+            return acc + edge[attr];
+          }, 0);
+          let intotaler = (attr) => collection => collection.reduce((acc, edge) => {
+            if (edge[attr] === -999) {
+              return acc;
+            }
+            if (edge.sa2_code_w === Number(SA22018_V1_00) && edge.sa22018_v1 === Number(SA22018_V1_00)) {
+              return acc;
+            }
+            return acc + edge[attr];
+          }, 0);
+          let withintotaler = (attr) => collection => collection.reduce((acc, edge) => {
+            if (edge[attr] === -999) {
+              return acc;
+            }
+            if (edge.sa2_code_w === Number(SA22018_V1_00) && edge.sa22018_v1 === Number(SA22018_V1_00)) {
+              return acc + edge[attr];
+            }
+            return acc;
+          }, 0);
+          edges.sort((a, b) => b.total - a.total);
+          let name = sa2NameLookup[SA22018_V1_00];
+          let outboundTotals = [
+            ['Outbound Total', outtotaler('total')(edges)],
+            ['Work at home', outtotaler('work_at_ho')(edges)],
+            ['Walk or jog', outtotaler('walk_or_jo')(edges)],
+            ['Train', outtotaler('train')(edges)],
+            ['Public bus', outtotaler('public_bus')(edges)],
+            ['Passenger', outtotaler('passenger_')(edges)],
+            ['Ferry', outtotaler('ferry')(edges)],
+            ['Private Car', outtotaler('drive_a_pr')(edges)],
+            ['Bicycle', outtotaler('bicycle')(edges)],
+            ['Other', outtotaler('other')(edges)],
           ]
-          setFeatures(edges)
-          setActiveFeature({name, totals})
+          let inboundTotals = [
+            ['Inbound Total', intotaler('total')(edges)],
+            ['Work at home', intotaler('work_at_ho')(edges)],
+            ['Walk or jog', intotaler('walk_or_jo')(edges)],
+            ['Train', intotaler('train')(edges)],
+            ['Public bus', intotaler('public_bus')(edges)],
+            ['Passenger', intotaler('passenger_')(edges)],
+            ['Ferry', intotaler('ferry')(edges)],
+            ['Private Car', intotaler('drive_a_pr')(edges)],
+            ['Bicycle', intotaler('bicycle')(edges)],
+            ['Other', intotaler('other')(edges)],
+          ]
+          let withinTotals = [
+            ['Living and working within', withintotaler('total')(edges)],
+            ['Work at home', withintotaler('work_at_ho')(edges)],
+            ['Walk or jog', withintotaler('walk_or_jo')(edges)],
+            ['Train', withintotaler('train')(edges)],
+            ['Public bus', withintotaler('public_bus')(edges)],
+            ['Passenger', withintotaler('passenger_')(edges)],
+            ['Ferry', withintotaler('ferry')(edges)],
+            ['Private Car', withintotaler('drive_a_pr')(edges)],
+            ['Bicycle', withintotaler('bicycle')(edges)],
+            ['Other', withintotaler('other')(edges)],
+          ]
+          setDrawer(true);
+          setActiveFeatureId(SA22018_V1_00);
+          // setFeatures(edges);
+          setActiveFeature({name, outboundTotals, inboundTotals, withinTotals});
         }
       });
     }, []);
+
+    useEffect(() => {
+      if (activeFeatureId) {
+        let centroid = sa2CentroidLookup[activeFeatureId];
+        let walk = circle(centroid, walkRadius);
+        let bike = circle(centroid, bikeRadius);
+        let ebike = circle(centroid, eBikeRadius);
+        setBikeCircle(bike);
+        setEBikeCircle(ebike);
+        setWalkCircle(walk);
+      }
+    }, [activeFeatureId, bikeRadius, eBikeRadius, walkRadius]);
 
   useEffect(() => {
     if (loaded) {
@@ -165,7 +231,7 @@ function App() {
   useEffect(() => {
     if (loaded && activeFeatureId) {
       mapRef.current.addLayer({
-        id: `${activeFeatureId}-line`,
+        id: `${activeFeatureId}-line-outbound`,
         type: 'line',
         source: 'graph',
         layout: {
@@ -176,6 +242,19 @@ function App() {
           'line-color': '#f28cb1',
         },
         'filter': ['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]
+      });
+      mapRef.current.addLayer({
+        id: `${activeFeatureId}-line-inbound`,
+        type: 'line',
+        source: 'graph',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round'
+        },
+        paint: {
+          'line-color': '#8ab9f2',
+        },
+        'filter': ['==', 'sa2_code_w', Number(activeFeatureId)]
       });
       mapRef.current.addLayer({
         id: `${activeFeatureId}-label`,
@@ -191,6 +270,19 @@ function App() {
         'filter': ['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]
       });
       mapRef.current.addLayer({
+        id: `${activeFeatureId}-label-inbound`,
+        type: 'symbol',
+        source: 'graph',
+        'layout': {
+          'symbol-placement': 'line',
+          'text-field': ['get', ['to-string', ['get', 'sa22018_v1']], ['literal', sa2NameLookup]]
+        },
+        'paint': {
+          'text-color': 'rgba(232, 232, 192, 0.9)',
+        },
+        'filter': ['==', 'sa2_code_w', Number(activeFeatureId)]
+      });
+      mapRef.current.addLayer({
         'id': `${activeFeatureId}-fill`,
         'type': 'fill',
         'source': 'rowinf-data',
@@ -203,8 +295,11 @@ function App() {
       });
     }
     return () => {
-      if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-line`)) {
-        mapRef.current.removeLayer(`${activeFeatureId}-line`)
+      if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-line-outbound`)) {
+        mapRef.current.removeLayer(`${activeFeatureId}-line-outbound`)
+      }
+      if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-line-inbound`)) {
+        mapRef.current.removeLayer(`${activeFeatureId}-line-inbound`)
       }
       if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-fill`)) {
         mapRef.current.removeLayer(`${activeFeatureId}-fill`)
@@ -212,11 +307,14 @@ function App() {
       if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-label`)) {
         mapRef.current.removeLayer(`${activeFeatureId}-label`)
       }
+      if (mapRef.current.isStyleLoaded && mapRef.current.getLayer(`${activeFeatureId}-label-inbound`)) {
+        mapRef.current.removeLayer(`${activeFeatureId}-label-inbound`)
+      }
     }
   }, [activeFeatureId, loaded]);
 
   return (
-    <div className="App bg-gray-700">
+    <div className="App bg-gray-700 text-white">
       <Transition in={drawer} timeout={duration}>
         {(state) => (
           <>
@@ -229,10 +327,15 @@ function App() {
               onStyleLoad={onMapLoad}
               containerStyle={{ position: 'absolute', top: 0, bottom: 0, ...transitionMapStyles[state]}}
               className="transition-width ease-in-out duration-300"
-            />
-            <div className="transition ease-in-out duration-300 bg-gray-700 border-dashed border-4 border-gray-600" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
-              {activeFeature && <Drawer activeFeature={activeFeature} features={features} />}
-              <button className="text-white absolute top-0 right-0 font-bold py-2 px-4 rounded inline-flex items-center" onClick={() => setDrawer(false)}>
+            >
+              {bikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#229933", 'fill-opacity': 0.2 }} data={bikeCircle}  />}
+              {eBikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#7aaa25", 'fill-opacity': 0.2 }} data={eBikeCircle}  />}
+              {walkCircle && <GeoJSONLayer fillPaint={{'fill-color': "#9bcc87", 'fill-opacity': 0.3 }} data={walkCircle}  />}
+              <FetchJson url="https://gist.githubusercontent.com/rowinf/159d218722c8fe82964343a015fbc62e/raw/7bd9457c76df2c705020b7f3a5c43fcba346d5d3/sa2-centroids-ext.geojson" onSuccess={console.log} />
+            </Map>
+            <div className="transition ease-in-out duration-300 border-dashed border-4 border-gray-600 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
+              {activeFeature && <Drawer activeFeature={activeFeature} />}
+              <button className="absolute top-0 right-0 font-bold py-2 px-4 rounded inline-flex items-center" onClick={() => setDrawer(false)}>
                 <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 8.586L2.929 1.515 1.515 2.929 8.586 10l-7.071 7.071 1.414 1.414L10 11.414l7.071 7.071 1.414-1.414L11.414 10l7.071-7.071-1.414-1.414L10 8.586z"/></svg>
               </button>
             </div>
