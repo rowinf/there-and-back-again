@@ -10,6 +10,7 @@ import educationGraph from './education_graph.json';
 import centroids from './sa2-centroids-ext.json';
 import { Drawer } from './Drawer';
 import { FetchJson } from './FetchJson';
+import { Overview, emitter } from './Overview';
 
 const sa2NameLookup = centroids.features.reduce((acc, centroid) => {
   acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
@@ -50,6 +51,30 @@ const Map = ReactMapboxGl({
   accessToken: process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
 });
 let empty = [];
+let workFeatureMap = [
+  ['Work at home', 'work_at_ho'],
+  ['Walk or jog', 'walk_or_jo'],
+  ['Train', 'train'],
+  ['Public bus', 'public_bus'],
+  ['Passenger', 'passenger_'],
+  ['Ferry', 'ferry'],
+  ['Private Car', 'drive_a_pr'],
+  ['Bicycle', 'bicycle'],
+  ['Other', 'other'],
+];
+let educationFeatureMap = [
+  ['Bicycle', 'bicycle'],
+  ['Drive a Car', 'drive_a_ca'],
+  ['Passenger', 'passenger_'],
+  ['Public bus', 'public_bus'],
+  ['School bus', 'school_bus'],
+  ['Train', 'train'],
+  ['Walk or jog', 'walk_or_jo'],
+  ['Study at home', 'study_at_h'],
+];
+
+let colors = ['#f28cb1', '#8ab9f2', '#8ae89a'];
+
 function App() {
   let [loaded, setLoaded] = useState(false);
   let [activeFeatureId, setActiveFeatureId] = useState();
@@ -69,6 +94,7 @@ function App() {
   let [drawer, setDrawer]= useState(false);
   let [zoom, setZoom] = useState([9]);
   let [center, setCenter] = useState([174.3130,-36.5949]);
+  let [filtered, setFiltered] = useState([])
   let mapRef = useRef();
   let onMapLoad = useCallback((map) => {
       mapRef.current = map;
@@ -151,35 +177,17 @@ function App() {
         return acc;
       }, 0);
       let name = sa2NameLookup[activeFeatureId];
-      let makeFeatMap = (topLabel) => filters.dataset === 'w' ? [
-        [topLabel, 'total'],
-        ['Work at home', 'work_at_ho'],
-        ['Walk or jog', 'walk_or_jo'],
-        ['Train', 'train'],
-        ['Public bus', 'public_bus'],
-        ['Passenger', 'passenger_'],
-        ['Ferry', 'ferry'],
-        ['Private Car', 'drive_a_pr'],
-        ['Bicycle', 'bicycle'],
-        ['Other', 'other'],
-      ] : [
-        [topLabel, 'total'],
-        ['Bicycle', 'bicycle'],
-        ['Drive a Car', 'drive_a_ca'],
-        ['Passenger', 'passenger_'],
-        ['Public bus', 'public_bus'],
-        ['School bus', 'school_bus'],
-        ['Train', 'train'],
-        ['Walk or jog', 'walk_or_jo'],
-        ['Study at home', 'study_at_h'],
-      ]
       let featGroups = [
         filters.dataset === 'e' ? ['Total', withintotaler] : ['Within', withintotaler],
         filters.outbound ? ['Outbound', outtotaler] : null,
         filters.inbound ? ['Inbound', intotaler] : null
       ].filter(g => g);
-      let data = featGroups.map(([label, totaler]) => {
-        return makeFeatMap(label).map(([label, attr]) => {
+      let data = featGroups.map(([topLabel, totaler]) => {
+        let featureMap = [
+          [topLabel, 'total'],
+          ...(filters.dataset === 'w' ? workFeatureMap : educationFeatureMap)
+        ]
+        return featureMap.map(([label, attr]) => {
           return [label, totaler(attr)(features)]
         });
       });
@@ -242,7 +250,7 @@ function App() {
         'source': 'rowinf-data',
         'source-layer': 'data',
         'paint': {
-          'fill-color': '#f28cb1',
+          'fill-color': '#b2ec91',
           'fill-opacity': 0.1
         },
         'filter': ['==', 'SA22018_V1_00', activeFeatureId]
@@ -254,6 +262,16 @@ function App() {
       }
     }
   }, [activeFeatureId, loaded]);
+
+  useEffect(() => {
+    emitter.on('overview_results', (r) => {
+      console.log(r);
+      setFiltered(r);
+    });
+    return () => {
+      emitter.off('overview_results');
+    }
+  }, [])
 
   return (
     <div className="App bg-gray-700 text-white">
@@ -286,6 +304,21 @@ function App() {
                 </>
               ) : null}
             </Map>
+            <div className="absolute left-0 right-0 bottom-0 flex">
+              <div className="w-2/3">
+                <Overview
+                  data={commuterGraph.features}
+                  featureMap={workFeatureMap}
+                  sa2={sa2NameLookup}
+                  colors={colors} />
+                </div>
+              <div className="w-1/3 bg-gray-700">
+                {filtered.length
+                  ? filtered.map(f => f).join('\n')
+                  : 'Select a range in the chart for the regions to appear here'
+                }
+              </div>
+            </div>
             <FetchJson url="https://gist.githubusercontent.com/rowinf/159d218722c8fe82964343a015fbc62e/raw/7bd9457c76df2c705020b7f3a5c43fcba346d5d3/sa2-centroids-ext.geojson" onSuccess={console.log} />
             <div className="transition ease-in-out duration-300 border-dashed border-4 border-gray-600 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
               {activeFeature && <Drawer activeFeature={activeFeature} filters={filters} setFilters={setFilters} />}

@@ -7,6 +7,8 @@ import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/grid';
 import 'echarts/lib/component/legend';
 import 'echarts/lib/component/title';
+import 'echarts/lib/chart/parallel';
+import 'echarts/lib/component/parallelAxis';
 
 const Chart = ({ data, dataset }) => {
   let [, ...modeLabels] = data[0].map(d => d[0])
