@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import ReactMapboxGl, { Layer, GeoJSONLayer, Source } from "react-mapbox-gl";
+import ReactMapboxGl, { Layer } from "react-mapbox-gl";
 import { Transition } from 'react-transition-group';
-import circle from '@turf/circle'
+// import circle from '@turf/circle'
 
 import logo from './logo.svg';
 import './App.css';
 import commuterGraph from './commuter_graph.json';
+import educationGraph from './education_graph.json';
 import centroids from './sa2-centroids-ext.json';
 import { Drawer } from './Drawer';
 import { FetchJson } from './FetchJson';
@@ -13,12 +14,12 @@ import { FetchJson } from './FetchJson';
 const sa2NameLookup = centroids.features.reduce((acc, centroid) => {
   acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
   return acc
-}, {})
+}, {});
 
-const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
-  acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
-  return acc
-}, {})
+// const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
+//   acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
+//   return acc
+// }, {});
 
 const duration = 300;
 
@@ -48,22 +49,23 @@ const transitionMapStyles = {
 const Map = ReactMapboxGl({
   accessToken: process.env.REACT_APP_MAPBOX_ACCESS_TOKEN
 });
-
+let empty = [];
 function App() {
   let [loaded, setLoaded] = useState(false);
   let [activeFeatureId, setActiveFeatureId] = useState();
   let [hoverFeatureId, setHoverFeatureId] = useState();
-  let [walkCircle, setWalkCircle] = useState();
-  let [bikeCircle, setBikeCircle] = useState();
-  let [eBikeCircle, setEBikeCircle] = useState();
-  let [walkRadius] = useState(1.5);
-  let [bikeRadius] = useState(4);
-  let [eBikeRadius] = useState(10);
-  let [features, setFeatures] = useState([]);
+  // let [walkCircle, setWalkCircle] = useState();
+  // let [bikeCircle, setBikeCircle] = useState();
+  // let [eBikeCircle, setEBikeCircle] = useState();
+  // let [walkRadius] = useState(1.5);
+  // let [bikeRadius] = useState(4);
+  // let [eBikeRadius] = useState(10);
   let [filters, setFilters] = useState({
     inbound: true,
-    outbound: true
-  })
+    outbound: true,
+    dataset: 'w'
+  });
+  let sa2Attr = filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'
   let [drawer, setDrawer]= useState(false);
   let [zoom, setZoom] = useState([9]);
   let [center, setCenter] = useState([174.3130,-36.5949]);
@@ -103,26 +105,29 @@ function App() {
           let [feat] = efeatures;
           let { properties } = feat;
           let { SA22018_V1_00 } = properties;
-          let {features} = commuterGraph;
-          let edges = features.filter(feat => {
-            return (feat.properties.sa22018_v1 === Number(SA22018_V1_00)) || (feat.properties.sa2_code_w === Number(SA22018_V1_00))
-          }).map(edge => ({
-            name: sa2NameLookup[edge.properties.sa2_code_w],
-            ...edge.properties,
-          }));
-          edges.sort((a, b) => b.total - a.total);
-          setFeatures(edges);
           setDrawer(true);
           setActiveFeatureId(SA22018_V1_00);
         }
       });
     }, []);
+    let features = useMemo(() => {
+      if (!activeFeatureId) return empty;
+      let {features} = filters.dataset === 'e' ? educationGraph : commuterGraph;
+      let edges = features.filter(feat => {
+        return (feat.properties.sa22018_v1 === Number(activeFeatureId)) || (feat.properties[sa2Attr] === Number(activeFeatureId))
+      }).map(edge => ({
+        name: sa2NameLookup[edge.properties[sa2Attr]],
+        ...edge.properties,
+      }));
+      edges.sort((a, b) => b.total - a.total);
+      return edges;
+    }, [activeFeatureId, filters.dataset, sa2Attr]);
     let activeFeature = useMemo(() => {
       let outtotaler = (attr) => collection => collection.reduce((acc, edge) => {
         if (edge[attr] === -999) {
           return acc;
         }
-        if (edge.sa2_code_w !== Number(activeFeatureId) && edge.sa22018_v1 === Number(activeFeatureId)) {
+        if (edge[sa2Attr] !== Number(activeFeatureId) && edge.sa22018_v1 === Number(activeFeatureId)) {
           return acc + edge[attr];
         }
         return acc;
@@ -131,7 +136,7 @@ function App() {
         if (edge[attr] === -999) {
           return acc;
         }
-        if (edge.sa2_code_w === Number(activeFeatureId) && edge.sa22018_v1 !== Number(activeFeatureId)) {
+        if (edge[sa2Attr] === Number(activeFeatureId) && edge.sa22018_v1 !== Number(activeFeatureId)) {
           return acc + edge[attr];
         }
         return acc;
@@ -140,70 +145,64 @@ function App() {
         if (edge[attr] === -999) {
           return acc;
         }
-        if (edge.sa2_code_w === Number(activeFeatureId) && edge.sa22018_v1 === Number(activeFeatureId)) {
+        if (edge[sa2Attr] === Number(activeFeatureId) && edge.sa22018_v1 === Number(activeFeatureId)) {
           return acc + edge[attr];
         }
         return acc;
       }, 0);
       let name = sa2NameLookup[activeFeatureId];
-      let data = []
-      let withinTotals = [
-        ['Within', withintotaler('total')(features)],
-        ['Work at home', withintotaler('work_at_ho')(features)],
-        ['Walk or jog', withintotaler('walk_or_jo')(features)],
-        ['Train', withintotaler('train')(features)],
-        ['Public bus', withintotaler('public_bus')(features)],
-        ['Passenger', withintotaler('passenger_')(features)],
-        ['Ferry', withintotaler('ferry')(features)],
-        ['Private Car', withintotaler('drive_a_pr')(features)],
-        ['Bicycle', withintotaler('bicycle')(features)],
-        ['Other', withintotaler('other')(features)],
-      ];
-      data.push(withinTotals);
-      if (filters.outbound) {
-        let outboundTotals = [
-          ['Outbound', outtotaler('total')(features)],
-          ['Work at home', outtotaler('work_at_ho')(features)],
-          ['Walk or jog', outtotaler('walk_or_jo')(features)],
-          ['Train', outtotaler('train')(features)],
-          ['Public bus', outtotaler('public_bus')(features)],
-          ['Passenger', outtotaler('passenger_')(features)],
-          ['Ferry', outtotaler('ferry')(features)],
-          ['Private Car', outtotaler('drive_a_pr')(features)],
-          ['Bicycle', outtotaler('bicycle')(features)],
-          ['Other', outtotaler('other')(features)],
-        ];
-        data.push(outboundTotals);
-      }
-      if (filters.inbound) {
-        let inboundTotals = [
-          ['Inbound', intotaler('total')(features)],
-          ['Work at home', intotaler('work_at_ho')(features)],
-          ['Walk or jog', intotaler('walk_or_jo')(features)],
-          ['Train', intotaler('train')(features)],
-          ['Public bus', intotaler('public_bus')(features)],
-          ['Passenger', intotaler('passenger_')(features)],
-          ['Ferry', intotaler('ferry')(features)],
-          ['Private Car', intotaler('drive_a_pr')(features)],
-          ['Bicycle', intotaler('bicycle')(features)],
-          ['Other', intotaler('other')(features)],
-        ];
-        data.push(inboundTotals);
-      }
+      let makeFeatMap = (topLabel) => filters.dataset === 'w' ? [
+        [topLabel, 'total'],
+        ['Work at home', 'work_at_ho'],
+        ['Walk or jog', 'walk_or_jo'],
+        ['Train', 'train'],
+        ['Public bus', 'public_bus'],
+        ['Passenger', 'passenger_'],
+        ['Ferry', 'ferry'],
+        ['Private Car', 'drive_a_pr'],
+        ['Bicycle', 'bicycle'],
+        ['Other', 'other'],
+      ] : [
+        [topLabel, 'total'],
+        ['Bicycle', 'bicycle'],
+        ['Drive a Car', 'drive_a_ca'],
+        ['Passenger', 'passenger_'],
+        ['Public bus', 'public_bus'],
+        ['School bus', 'school_bus'],
+        ['Train', 'train'],
+        ['Walk or jog', 'walk_or_jo'],
+        ['Study at home', 'study_at_h'],
+      ]
+      let featGroups = [
+        filters.dataset === 'e' ? ['Education Total', withintotaler] : ['Within', withintotaler],
+        filters.outbound ? ['Outbound', outtotaler] : null,
+        filters.inbound ? ['Inbound', intotaler] : null
+      ].filter(g => g);
+      let data = featGroups.map(([label, totaler]) => {
+        return makeFeatMap(label).map(([label, attr]) => {
+          return [label, totaler(attr)(features)]
+        });
+      });
       return {name, data}
-    }, [activeFeatureId, features, filters.inbound, filters.outbound])
+    }, [activeFeatureId, features, filters.dataset, filters.inbound, filters.outbound, sa2Attr])
 
-    useEffect(() => {
-      if (activeFeatureId) {
-        let centroid = sa2CentroidLookup[activeFeatureId];
-        let walk = circle(centroid, walkRadius);
-        let bike = circle(centroid, bikeRadius);
-        let ebike = circle(centroid, eBikeRadius);
-        setBikeCircle(bike);
-        setEBikeCircle(ebike);
-        setWalkCircle(walk);
-      }
-    }, [activeFeatureId, bikeRadius, eBikeRadius, walkRadius]);
+    // useEffect(() => {
+    //   if (activeFeatureId) {
+    //     let centroid = sa2CentroidLookup[activeFeatureId];
+    //     if (centroid) {
+    //       let walk = circle(centroid, walkRadius);
+    //       let bike = circle(centroid, bikeRadius);
+    //       let ebike = circle(centroid, eBikeRadius);
+    //       setBikeCircle(bike);
+    //       setEBikeCircle(ebike);
+    //       setWalkCircle(walk);
+    //     } else {
+    //       setBikeCircle(null);
+    //       setEBikeCircle(null);
+    //       setWalkCircle(null);
+    //     }
+    //   }
+    // }, [activeFeatureId, bikeRadius, eBikeRadius, walkRadius]);
 
   useEffect(() => {
     if (loaded) {
@@ -215,7 +214,7 @@ function App() {
               id: hoverFeatureId,
               source: 'rowinf-data',
               sourceLayer: 'data'
-            })
+            });
           }
           let {id} = e.features[0]
           setHoverFeatureId(id)
@@ -231,7 +230,7 @@ function App() {
     }
     return ()=> {
       if (loaded) {
-        mapRef.current.off('mousemove', 'sa2-join')
+        mapRef.current.off('mousemove', 'sa2-join');
       }
     }
   }, [hoverFeatureId, loaded]);
@@ -271,16 +270,16 @@ function App() {
               containerStyle={{ position: 'absolute', top: 0, bottom: 0, ...transitionMapStyles[state]}}
               className="transition-width ease-in-out duration-300"
             >
-              {bikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#229933", 'fill-opacity': 0.2 }} data={bikeCircle}  />}
+              {/* {bikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#229933", 'fill-opacity': 0.2 }} data={bikeCircle}  />}
               {eBikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#7aaa25", 'fill-opacity': 0.2 }} data={eBikeCircle}  />}
-              {walkCircle && <GeoJSONLayer fillPaint={{'fill-color': "#9bcc87", 'fill-opacity': 0.3 }} data={walkCircle}  />}
-              {loaded && filters.outbound ? (
+              {walkCircle && <GeoJSONLayer fillPaint={{'fill-color': "#9bcc87", 'fill-opacity': 0.3 }} data={walkCircle}  />} */}
+              {loaded && filters.outbound && filters.dataset === 'w' ? (
                 <>
                   <Layer id="outbound-line" type="line" sourceId="graph" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#f28cb1', 'line-offset': -2 }} filter={['==', 'sa22018_v1', Number(activeFeatureId)]} />
                   <Layer id="outbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa2_code_w']], ['literal', sa2NameLookup]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]} />
                 </>
               ) : null}
-              {loaded && filters.inbound ? (
+              {loaded && filters.inbound && filters.dataset === 'w' ? (
                 <>
                   <Layer id="inbound-line" type="line" sourceId="graph" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#8ab9f2', 'line-offset': 4 }} filter={['==', 'sa2_code_w', Number(activeFeatureId)]} />
                   <Layer id="inbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa22018_v1']], ['literal', sa2NameLookup]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'sa2_code_w', Number(activeFeatureId)]} />

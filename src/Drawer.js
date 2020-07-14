@@ -8,6 +8,9 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
     let isActive = !!filters[attr];
     setFilters({ ...filters, [attr]: !isActive });
   }
+  let addFilter = (attr, value) => {
+    setFilters({ ...filters, [attr]: value });
+  }
   let createTotals = useCallback(() => {
     let tables = [];
 
@@ -35,25 +38,32 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
         <div className="flex-auto">
           <form autoComplete="off">
             <div className="flex flex-col my-4">
-            <h4>Filter</h4>
-            {/* <label htmlFor="work">Work</label>
-            <input type="checkbox" name="work" />
-            <label htmlFor="education">Education</label>
-            <input type="checkbox" name="education" /> */}
-            <div className="flex">
-              <label className="block font-bold w-1/2">
-                <input className="mr-2 leading-tight" type="checkbox" name="inbound" onClick={() => toggle('inbound')} checked={filters.inbound} />
-                <span className="text-sm">Inbound</span>
+            <h4 className="text-sm">Choose which dataset to display</h4>
+            <div className="flex mb-2">
+              <label className="block font-bold w-1/4">
+                <input className="mr-2 leading-tight" type="radio" name="dataset" value="e" checked={filters.dataset === 'e'} onChange={(e) => addFilter('dataset', 'e')} />
+                <span>Education</span>
               </label>
-              <label className="block font-bold w-1/2">
-                <input className="mr-2 leading-tight" type="checkbox" name="outbound" onClick={() => toggle('outbound')} checked={filters.outbound} />
-                <span className="text-sm">Outbound</span>
+              <label className="block font-bold w-1/4">
+                <input className="mr-2 leading-tight" type="radio" name="dataset" value="w" checked={filters.dataset === 'w'} onChange={(e) => addFilter('dataset', 'w')} />
+                <span>Work</span>
+              </label>
+            </div>
+            <h4 className="text-sm">Outbound/inbound is the direction the commuters are going, if they are going into the area or leaving it</h4>
+            <div className="flex mb-2">
+              <label className="block font-bold w-1/4">
+                <input className="mr-2 leading-tight" type="checkbox" name="inbound" onChange={() => toggle('inbound')} checked={filters.inbound} />
+                <span>Inbound</span>
+              </label>
+              <label className="block font-bold w-1/4">
+                <input className="mr-2 leading-tight" type="checkbox" name="outbound" onChange={() => toggle('outbound')} checked={filters.outbound} />
+                <span>Outbound</span>
               </label>
             </div>
           </div>
           </form>
         </div>
-        <div className="flex-auto my-4">
+        <div className="flex-auto mb-2">
           <button className={clx("font-bold py-2 px-4 rounded hover:bg-blue-700", {'bg-transparent': expanded, 'bg-blue-500': !expanded})} onClick={() => setExpanded(false)}>Chart</button>
           <button className={clx("font-bold py-2 px-4 mx-4 rounded hover:bg-blue-700", {'bg-transparent': !expanded, 'bg-blue-500': expanded})} onClick={() => setExpanded(true)}>Data Tables</button>
         </div>
@@ -69,7 +79,7 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
             )}
             </>
           ) : (
-            <Chart data={activeFeature.data} />
+            <Chart data={activeFeature.data} dataset={filters.dataset} />
           )
         }
         </div>

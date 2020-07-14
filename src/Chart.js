@@ -2,13 +2,14 @@ import React from 'react'
 import ReactEchartsCore from 'echarts-for-react/lib/core';
 import echarts from 'echarts/lib/echarts';
 import 'echarts/lib/chart/bar';
+import 'echarts/lib/chart/pie';
 import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/grid';
 import 'echarts/lib/component/legend';
 
-const Chart = ({ data }) => {
+const Chart = ({ data, dataset }) => {
   let [, ...modeLabels] = data[0].map(d => d[0])
-  let option = {
+  let option = dataset === 'w' ? {
     tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -47,14 +48,46 @@ const Chart = ({ data }) => {
       },
       data: data.map(d => d.find(item => item[0] === label)[1])
     }))
+  } : {
+    tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)'
+    },
+    legend: {
+        orient: 'vertical',
+        left: 10,
+        data: data[0].slice(1).filter(d => d[1] > 0).map(d => d[0])
+    },
+    series: [
+        {
+            name: data[0][0],
+            type: 'pie',
+            radius: ['50%', '70%'],
+            avoidLabelOverlap: false,
+            label: {
+                show: false,
+                position: 'center'
+            },
+            emphasis: {
+                label: {
+                    show: true,
+                    fontSize: '20'
+                }
+            },
+            labelLine: {
+                show: false
+            },
+            data: data[0].slice(1).map(d => ({value: d[1], name: d[0] }))
+        }
+    ]
   };
 
   return (
     <ReactEchartsCore
       echarts={echarts}
       option={option}
-      notMerge={true}
-      lazyUpdate={true}
+      notMerge
+      lazyUpdate
       theme="dark"
     />
   )
