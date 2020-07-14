@@ -40,22 +40,22 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
             <div className="flex flex-col my-4">
             <h4 className="text-sm">Choose which dataset to display</h4>
             <div className="flex mb-2">
-              <label className="block font-bold w-1/4">
+              <label className="block font-bold w-1/2">
                 <input className="mr-2 leading-tight" type="radio" name="dataset" value="e" checked={filters.dataset === 'e'} onChange={(e) => addFilter('dataset', 'e')} />
                 <span>Education</span>
               </label>
-              <label className="block font-bold w-1/4">
+              <label className="block font-bold w-1/2">
                 <input className="mr-2 leading-tight" type="radio" name="dataset" value="w" checked={filters.dataset === 'w'} onChange={(e) => addFilter('dataset', 'w')} />
                 <span>Work</span>
               </label>
             </div>
             <h4 className="text-sm">Outbound/inbound is the direction the commuters are going, if they are going into the area or leaving it</h4>
             <div className="flex mb-2">
-              <label className="block font-bold w-1/4">
+              <label className="block font-bold w-1/2">
                 <input className="mr-2 leading-tight" type="checkbox" name="inbound" onChange={() => toggle('inbound')} checked={filters.inbound} />
                 <span>Inbound</span>
               </label>
-              <label className="block font-bold w-1/4">
+              <label className="block font-bold w-1/2">
                 <input className="mr-2 leading-tight" type="checkbox" name="outbound" onChange={() => toggle('outbound')} checked={filters.outbound} />
                 <span>Outbound</span>
               </label>
