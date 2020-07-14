@@ -34,15 +34,15 @@ const defaultStyle = {
 
 const transitionDrawerStyles = {
   entering: { width: 0, opacity: 0 },
-  entered:  { width: '25%', opacity: 1 },
-  exiting:  { width: '25%', opacity: 1 },
+  entered:  { width: '34%', opacity: 1 },
+  exiting:  { width: '34%', opacity: 1 },
   exited:  { width: 0, opacity: 0 },
 };
 
 const transitionMapStyles = {
   entering: { width: '100%' },
-  entered:  { width: '75%' },
-  exiting:  { width: '75%' },
+  entered:  { width: '66%' },
+  exiting:  { width: '66%' },
   exited:  { width: '100%' },
 };
 
@@ -174,7 +174,7 @@ function App() {
         ['Study at home', 'study_at_h'],
       ]
       let featGroups = [
-        filters.dataset === 'e' ? ['Education Total', withintotaler] : ['Within', withintotaler],
+        filters.dataset === 'e' ? ['Total', withintotaler] : ['Within', withintotaler],
         filters.outbound ? ['Outbound', outtotaler] : null,
         filters.inbound ? ['Inbound', intotaler] : null
       ].filter(g => g);

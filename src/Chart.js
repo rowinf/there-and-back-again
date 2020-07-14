@@ -6,10 +6,15 @@ import 'echarts/lib/chart/pie';
 import 'echarts/lib/component/tooltip';
 import 'echarts/lib/component/grid';
 import 'echarts/lib/component/legend';
+import 'echarts/lib/component/title';
 
 const Chart = ({ data, dataset }) => {
   let [, ...modeLabels] = data[0].map(d => d[0])
   let option = dataset === 'w' ? {
+    title: {
+        text: `Total: ${data.map(d => d[0][1]).reduce((acc, num) => acc + num, 0)}`,
+        left: 'right'
+    },
     tooltip: {
         trigger: 'axis',
         axisPointer: {
@@ -18,12 +23,15 @@ const Chart = ({ data, dataset }) => {
         formatter: (serie) => serie.map(series => `<span style=display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:${series.color};></span>${series.seriesName} ${series.value || '-'} <br />`).join(' ')
     },
     legend: {
-        data: modeLabels
+        data: modeLabels,
+        left: 'left',
+        width: 250
     },
     grid: {
         left: '3%',
         right: '4%',
         bottom: '3%',
+        top: '24%',
         containLabel: true
     },
     xAxis: {
@@ -49,6 +57,10 @@ const Chart = ({ data, dataset }) => {
       data: data.map(d => d.find(item => item[0] === label)[1])
     }))
   } : {
+    title: {
+        text: data[0][0].join(': '),
+        left: 'right'
+    },
     tooltip: {
         trigger: 'item',
         formatter: '{a} <br/>{b}: {c} ({d}%)'
