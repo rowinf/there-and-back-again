@@ -1,5 +1,5 @@
 {
-  "name": "mapbox-thing",
+  "name": "there-and-back-again",
   "version": "0.1.0",
   "private": true,
   "homepage": "https://rowinf.github.io/there-and-back-again",
@@ -25,7 +25,7 @@
   },
   "scripts": {
     "predeploy": "npm run build",
-    "deploy": "gh-pages -b master -d build",
+    "deploy": "gh-pages -d build",
     "build:style": "tailwind build src/styles/index.css -o src/styles/tailwind.css",
     "start": "npm run build:style && react-scripts start",
     "build": "react-scripts build",
