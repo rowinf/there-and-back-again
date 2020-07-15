@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from 'react';
-import clx from 'classnames';
 import { Chart } from './Chart';
 
 const Drawer = ({ activeFeature, filters, setFilters }) => {

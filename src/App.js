@@ -1,26 +1,14 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import ReactMapboxGl, { Layer } from "react-mapbox-gl";
 import { Transition } from 'react-transition-group';
-// import circle from '@turf/circle'
 
 import logo from './logo.svg';
 import './App.css';
 import commuterGraph from './commuter_graph.json';
 import educationGraph from './education_graph.json';
-import centroids from './sa2-centroids-ext.json';
 import { Drawer } from './Drawer';
 import { FetchJson } from './FetchJson';
 import { Overview, emitter } from './Overview';
-
-const sa2NameLookup = centroids.features.reduce((acc, centroid) => {
-  acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
-  return acc
-}, {});
-
-const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
-  acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
-  return acc
-}, {});
 
 const duration = 300;
 
@@ -75,6 +63,7 @@ let educationFeatureMap = [
 let colors = ['#f28cb1', '#8ab9f2', '#8ae89a'];
 
 function App() {
+  let [maploaded, setMaploaded] = useState(false);
   let [loaded, setLoaded] = useState(false);
   let [activeFeatureId, setActiveFeatureId] = useState();
   let [hoverFeatureId, setHoverFeatureId] = useState();
@@ -94,7 +83,23 @@ function App() {
   let [zoom, setZoom] = useState([10]);
   let [center, setCenter] = useState([174.7507971,-36.8916042]);
   let [filtered, setFiltered] = useState([]);
+  let [centroids, setCentroids] = useState([]);
   let mapRef = useRef();
+  let sa2NameLookup = useRef({});
+  let sa2CentroidLookup = useRef({});
+  let onCentroidsLoaded = useCallback((json) => {
+    sa2NameLookup.current = json.features.reduce((acc, centroid) => {
+      acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
+      return acc
+    }, {});
+
+    sa2CentroidLookup.current = json.features.reduce((acc, record) => {
+      acc[record.properties['SA22018_V1_00']] = record.geometry
+      return acc
+    }, {});
+    setCentroids(true)
+  }, [])
+
   let onMapLoad = useCallback((map) => {
       mapRef.current = map;
       map.addSource('rowinf-data', {
@@ -107,7 +112,7 @@ function App() {
         type: 'geojson',
         data: commuterGraph,
       });
-      setLoaded(true);
+      setMaploaded(true);
       map.addLayer(
         {
           'id': 'hover-layer',
@@ -141,7 +146,7 @@ function App() {
       let edges = features.filter(feat => {
         return (feat.properties.sa22018_v1 === Number(activeFeatureId)) || (feat.properties[sa2Attr] === Number(activeFeatureId))
       }).map(edge => ({
-        name: sa2NameLookup[edge.properties[sa2Attr]],
+        name: sa2NameLookup.current[edge.properties[sa2Attr]],
         ...edge.properties,
       }));
       edges.sort((a, b) => b.total - a.total);
@@ -175,7 +180,7 @@ function App() {
         }
         return acc;
       }, 0);
-      let name = sa2NameLookup[activeFeatureId];
+      let name = sa2NameLookup.current[activeFeatureId];
       let featGroups = [
         filters.dataset === 'e' ? ['Total', withintotaler] : ['Within', withintotaler],
         filters.outbound ? ['Outbound', outtotaler] : null,
@@ -210,7 +215,11 @@ function App() {
     //     }
     //   }
     // }, [activeFeatureId, bikeRadius, eBikeRadius, walkRadius]);
-
+  useEffect(() => {
+    if (maploaded && centroids) {
+      setLoaded(true)
+    }
+  }, [centroids, maploaded])
   useEffect(() => {
     if (loaded) {
       mapRef.current.on('mousemove', 'hover-layer', function(e) {
@@ -289,16 +298,16 @@ function App() {
               {/* {bikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#229933", 'fill-opacity': 0.2 }} data={bikeCircle}  />}
               {eBikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#7aaa25", 'fill-opacity': 0.2 }} data={eBikeCircle}  />}
               {walkCircle && <GeoJSONLayer fillPaint={{'fill-color': "#9bcc87", 'fill-opacity': 0.3 }} data={walkCircle}  />} */}
-              {loaded && filters.outbound && filters.dataset === 'w' ? (
+              {centroids && loaded && filters.outbound && filters.dataset === 'w' ? (
                 <>
                   <Layer id="outbound-line" type="line" sourceId="graph" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#f28cb1', 'line-offset': -2 }} filter={['==', 'sa22018_v1', Number(activeFeatureId)]} />
-                  <Layer id="outbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa2_code_w']], ['literal', sa2NameLookup]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]} />
+                  <Layer id="outbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa2_code_w']], ['literal', sa2NameLookup.current]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'SA22018_V1'.toLocaleLowerCase(), Number(activeFeatureId)]} />
                 </>
               ) : null}
-              {loaded && filters.inbound && filters.dataset === 'w' ? (
+              {centroids && loaded && filters.inbound && filters.dataset === 'w' ? (
                 <>
                   <Layer id="inbound-line" type="line" sourceId="graph" layout={{ 'line-join': 'round', 'line-cap': 'round' }} paint={{ 'line-color': '#8ab9f2', 'line-offset': 4 }} filter={['==', 'sa2_code_w', Number(activeFeatureId)]} />
-                  <Layer id="inbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa22018_v1']], ['literal', sa2NameLookup]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'sa2_code_w', Number(activeFeatureId)]} />
+                  <Layer id="inbound-label" type="symbol" sourceId="graph" layout={{ 'symbol-placement': 'line', 'text-field': ['get', ['to-string', ['get', 'sa22018_v1']], ['literal', sa2NameLookup.current]] }} paint={{'text-color': 'rgba(232, 232, 192, 0.9)'}} filter={['==', 'sa2_code_w', Number(activeFeatureId)]} />
                 </>
               ) : null}
             </Map>
@@ -314,13 +323,13 @@ function App() {
                 <div style={{height: 300}} className="overflow-auto p-3">
                   {filtered.length
                     ? filtered.map(f => {
-                      let name = sa2NameLookup[f]
+                      let name = sa2NameLookup.current[f]
                       if (!name) return null
                       return (
                         <div key={f} className="flex items-baseline">
-                          <span className="text-sm">{f} {sa2NameLookup[f]}</span>
+                          <span className="text-sm">{f} {sa2NameLookup.current[f]}</span>
                           <button className="mx-2 px-2 border border-gray-100 rounded font-semibold" onClick={() => {
-                            let centroid = sa2CentroidLookup[f];
+                            let centroid = sa2CentroidLookup.current[f];
                             setActiveFeatureId(f);
                             setDrawer(true);
                             setTimeout(() => {
@@ -337,7 +346,7 @@ function App() {
                 </div>
               </div>
             </div>
-            <FetchJson url="https://gist.githubusercontent.com/rowinf/159d218722c8fe82964343a015fbc62e/raw/7bd9457c76df2c705020b7f3a5c43fcba346d5d3/sa2-centroids-ext.geojson" onSuccess={console.log} />
+            <FetchJson url="https://gist.githubusercontent.com/rowinf/0dc4187273028359193dd68cb8299209/raw/65f59fde8c750f512bf2bf1a1587debe90c4c827/sa2-centroids.geojson" onSuccess={onCentroidsLoaded} />
             <div className="transition ease-in-out duration-300 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
               {activeFeature && <Drawer activeFeature={activeFeature} filters={filters} setFilters={setFilters} />}
               <button className="absolute top-0 right-0 font-bold py-2 px-4 rounded inline-flex items-center" onClick={() => setDrawer(false)}>
