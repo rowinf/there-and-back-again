@@ -10,7 +10,7 @@ import 'echarts/lib/component/title';
 import 'echarts/lib/chart/parallel';
 import 'echarts/lib/component/parallelAxis';
 
-const Chart = ({ data, dataset }) => {
+const Chart = React.memo(({ data, dataset }) => {
   let [, ...modeLabels] = data[0].map(d => d[0])
   let option = dataset === 'w' ? {
     title: {
@@ -105,6 +105,6 @@ const Chart = ({ data, dataset }) => {
       theme="dark"
     />
   )
-}
+})
 
 export {Chart}

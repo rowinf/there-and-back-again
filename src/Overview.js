@@ -2,69 +2,90 @@ import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react'
 import ReactEchartsCore from 'echarts-for-react/lib/core';
 import echarts from 'echarts/lib/echarts';
 import EventEmitter from 'eventemitter3';
+import uniq from 'lodash/uniq'
 
 export const emitter = new EventEmitter()
 
+let empty = [];
 
-const Overview = React.memo(({ data, featureMap, sa2, colors }) => {
+const Overview = React.memo(({ data, featureMap, sa2Attr, colors }) => {
   let filters = useRef({});
   let schema = featureMap.map(([label, attr], i) => ({name: attr, index: i, text: label}));
+  let lastSa2Attr = useRef();
   let groups = {
     outbound: {},
     inbound: {},
     within: {}
   };
+  useEffect(() => {
+    if (sa2Attr !== lastSa2Attr.current) {
+      filters.current = {};
+      lastSa2Attr.current = sa2Attr;
+    }
+  }, [sa2Attr])
   let addFilter = useCallback((e) => {
     let {parallelAxisId, intervals} = e;
     let label = parallelAxisId.replace(/[0\0]/g,'');
     let scem = schema.find(s => s.text === label);
     if (scem) {
-      filters.current = {...filters.current, [scem.name]: intervals};
-      let results = [];
-      for (let [, val] of Object.entries(filters.current)) {
-        for (let [, grouped] of Object.entries(groups)) {
-          for (let [sa, values] of Object.entries(grouped)) {
-            val.forEach(v => {
-              if (values[scem.index] >= v[0] && values[scem.index] < v[1]) {
-                results.push(sa);
-              }
-            })
-          }
-        }
+      if (intervals.length === 0) {
+        delete filters.current[scem.name];
+      } else {
+        filters.current = {...filters.current, [scem.name]: intervals};
       }
-      emitter.emit('overview_results', results);
+      let results = [];
+      if (Object.keys(filters.current).length === 0) {
+        emitter.emit('overview_results', empty);
+        return;
+      };
+      for (let [, group] of Object.entries(groups)) {
+        for (let [sa, values] of Object.entries(group)) {
+          let conditions = schema
+            .filter(sch => filters.current.hasOwnProperty(sch.name) && filters.current[sch.name].length > 0)
+            .every(sch => {
+              let intervals = filters.current[sch.name];
+              let value = values[sch.index];
+              return intervals.every((interval) => {
+                return interval.every((num, i) => {
+                  return i === 0 ? (value >= num) : (value <= num);
+                })
+              })
+            });
+          if (conditions) { results.push(sa); }
+          if (results.length > 20) break;
+        }
+        if (results.length > 20) break;
+        let uniques = uniq(results);
+        emitter.emit('overview_results', uniques);
+      }
     }
   }, [groups, schema]);
   let groupAssign = (key, attr, values) => {
-    let group = groups[key]
+    let group = groups[key];
     if (!group.hasOwnProperty(attr)) {
       group[attr] = values;
     } else {
       values.forEach((val, i) => {
         if (group[attr][i] == null) {
           group[attr][i] = val;
-        } else if (isFinite(group[attr][i]) && val != null) {
+        } else if (val != null) {
           group[attr][i] += val;
         }
       });
     }
   }
   data.forEach(d => {
-    let {sa22018_v1, sa2_code_w} = d.properties
+    let {sa22018_v1} = d.properties;
+    let sa2 = d.properties[sa2Attr]
     let values = featureMap.map(([label, attr]) => {
       if (d.properties[attr] === -999) return null;
       return d.properties[attr];
     });
-    if (sa22018_v1 === sa2_code_w) {
-      groupAssign('within', sa22018_v1, values)
+    if (sa22018_v1 === sa2) {
+      groupAssign('within', sa22018_v1, values);
     } else {
-      groupAssign('outbound', sa22018_v1, values)
-      groupAssign('inbound', sa2_code_w, values)
-      // if (groups.outbound[sa22018_v1].some(a => {
-      //   return a > 1000
-      // })) {
-      //   debugger
-      // }
+      groupAssign('outbound', sa22018_v1, values);
+      groupAssign('inbound', sa2, values);
     }
   });
   let series = [{

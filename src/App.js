@@ -17,10 +17,10 @@ const sa2NameLookup = centroids.features.reduce((acc, centroid) => {
   return acc
 }, {});
 
-// const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
-//   acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
-//   return acc
-// }, {});
+const sa2CentroidLookup = centroids.features.reduce((acc, centroid) => {
+  acc[centroid.properties['SA22018_V1_00']] = centroid['geometry']
+  return acc
+}, {});
 
 const duration = 300;
 
@@ -29,21 +29,20 @@ const defaultStyle = {
   width: 0,
   position: 'absolute',
   top: 0,
-  bottom: 0,
   right: 0
 };
 
 const transitionDrawerStyles = {
   entering: { width: 0, opacity: 0 },
-  entered:  { width: '34%', opacity: 1 },
-  exiting:  { width: '34%', opacity: 1 },
+  entered:  { width: '33.333%', opacity: 1 },
+  exiting:  { width: '33.333%', opacity: 1 },
   exited:  { width: 0, opacity: 0 },
 };
 
 const transitionMapStyles = {
   entering: { width: '100%' },
-  entered:  { width: '66%' },
-  exiting:  { width: '66%' },
+  entered:  { width: '66.667%' },
+  exiting:  { width: '66.667%' },
   exited:  { width: '100%' },
 };
 
@@ -92,9 +91,9 @@ function App() {
   });
   let sa2Attr = filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'
   let [drawer, setDrawer]= useState(false);
-  let [zoom, setZoom] = useState([9]);
-  let [center, setCenter] = useState([174.3130,-36.5949]);
-  let [filtered, setFiltered] = useState([])
+  let [zoom, setZoom] = useState([10]);
+  let [center, setCenter] = useState([174.7507971,-36.8916042]);
+  let [filtered, setFiltered] = useState([]);
   let mapRef = useRef();
   let onMapLoad = useCallback((map) => {
       mapRef.current = map;
@@ -250,8 +249,8 @@ function App() {
         'source': 'rowinf-data',
         'source-layer': 'data',
         'paint': {
-          'fill-color': '#b2ec91',
-          'fill-opacity': 0.1
+          'fill-color': '#da1884',
+          'fill-opacity': 0.3
         },
         'filter': ['==', 'SA22018_V1_00', activeFeatureId]
       });
@@ -265,7 +264,6 @@ function App() {
 
   useEffect(() => {
     emitter.on('overview_results', (r) => {
-      console.log(r);
       setFiltered(r);
     });
     return () => {
@@ -275,7 +273,7 @@ function App() {
 
   return (
     <div className="App bg-gray-700 text-white">
-      <Transition in={drawer} timeout={duration}>
+      <Transition in={drawer} timeout={duration} onExited={() => setTimeout(() => mapRef.current.resize(), duration * 1.1)} onEntered={() => setTimeout(() => mapRef.current.resize(), duration * 1.1)}>
         {(state) => (
           <>
             <Map
@@ -285,7 +283,7 @@ function App() {
               zoom={zoom}
               tileset='rowinf.data'
               onStyleLoad={onMapLoad}
-              containerStyle={{ position: 'absolute', top: 0, bottom: 0, ...transitionMapStyles[state]}}
+              containerStyle={{ position: 'absolute', top: 0, left: 0, height: 'calc(100vh - 300px)', ...transitionMapStyles[state]}}
               className="transition-width ease-in-out duration-300"
             >
               {/* {bikeCircle && <GeoJSONLayer fillPaint={{'fill-color': "#229933", 'fill-opacity': 0.2 }} data={bikeCircle}  />}
@@ -307,20 +305,40 @@ function App() {
             <div className="absolute left-0 right-0 bottom-0 flex">
               <div className="w-2/3">
                 <Overview
-                  data={commuterGraph.features}
-                  featureMap={workFeatureMap}
-                  sa2={sa2NameLookup}
+                  data={filters.dataset === 'w' ? commuterGraph.features : educationGraph.features}
+                  featureMap={filters.dataset === 'w' ? workFeatureMap : educationFeatureMap}
+                  sa2Attr={filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'}
                   colors={colors} />
                 </div>
-              <div className="w-1/3 bg-gray-700">
-                {filtered.length
-                  ? filtered.map(f => f).join('\n')
-                  : 'Select a range in the chart for the regions to appear here'
-                }
+              <div className="w-1/3 flex flex-col flex-grow-0 flex-initial">
+                <div style={{height: 300}} className="overflow-auto p-3">
+                  {filtered.length
+                    ? filtered.map(f => {
+                      let name = sa2NameLookup[f]
+                      if (!name) return null
+                      return (
+                        <div key={f} className="flex items-baseline">
+                          <span className="text-sm">{f} {sa2NameLookup[f]}</span>
+                          <button className="mx-2 px-2 border border-gray-100 rounded font-semibold" onClick={() => {
+                            let centroid = sa2CentroidLookup[f];
+                            setActiveFeatureId(f);
+                            setDrawer(true);
+                            setTimeout(() => {
+                              setZoom([12])
+                            }, 100);
+                            mapRef.current.setCenter(centroid.coordinates);
+                          }}>Go
+                          </button>
+                        </div>
+                      )
+                      })
+                    : 'Select a range in the series chart to the left to filter regions here'
+                  }
+                </div>
               </div>
             </div>
             <FetchJson url="https://gist.githubusercontent.com/rowinf/159d218722c8fe82964343a015fbc62e/raw/7bd9457c76df2c705020b7f3a5c43fcba346d5d3/sa2-centroids-ext.geojson" onSuccess={console.log} />
-            <div className="transition ease-in-out duration-300 border-dashed border-4 border-gray-600 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
+            <div className="transition ease-in-out duration-300 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
               {activeFeature && <Drawer activeFeature={activeFeature} filters={filters} setFilters={setFilters} />}
               <button className="absolute top-0 right-0 font-bold py-2 px-4 rounded inline-flex items-center" onClick={() => setDrawer(false)}>
                 <svg className="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 8.586L2.929 1.515 1.515 2.929 8.586 10l-7.071 7.071 1.414 1.414L10 11.414l7.071 7.071 1.414-1.414L11.414 10l7.071-7.071-1.414-1.414L10 8.586z"/></svg>
