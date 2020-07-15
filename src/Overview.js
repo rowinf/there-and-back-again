@@ -27,6 +27,7 @@ const Overview = React.memo(({ data, featureMap, sa2Attr, colors }) => {
     let {parallelAxisId, intervals} = e;
     let label = parallelAxisId.replace(/[0\0]/g,'');
     let scem = schema.find(s => s.text === label);
+    let uniques = [];
     if (scem) {
       if (intervals.length === 0) {
         delete filters.current[scem.name];
@@ -54,12 +55,16 @@ const Overview = React.memo(({ data, featureMap, sa2Attr, colors }) => {
           if (conditions) { results.push(sa); }
           if (results.length > 20) break;
         }
-        let uniques = uniq(results);
+        uniques = uniq(results);
         if (uniques.length > 20) {
-          emitter.emit('overview_results', uniques);
           break;
         }
       }
+      /**
+       * using event emitter here to avoid passing props that might
+       * cause this to rerender
+       **/
+      emitter.emit('overview_results', uniques);
     }
   }, [groups, schema]);
   let groupAssign = (key, attr, values) => {
