@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import ReactEchartsCore from 'echarts-for-react/lib/core';
 import echarts from 'echarts/lib/echarts';
 import EventEmitter from 'eventemitter3';
@@ -54,9 +54,11 @@ const Overview = React.memo(({ data, featureMap, sa2Attr, colors }) => {
           if (conditions) { results.push(sa); }
           if (results.length > 20) break;
         }
-        if (results.length > 20) break;
         let uniques = uniq(results);
-        emitter.emit('overview_results', uniques);
+        if (uniques.length > 20) {
+          emitter.emit('overview_results', uniques);
+          break;
+        }
       }
     }
   }, [groups, schema]);

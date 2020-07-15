@@ -32,11 +32,11 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
   let tableTotals = createTotals();
   return (
     <div className="flex flex-col" style={{height: 'calc(100vh - 300px)'}}>
-      <div className="flex-auto m-3">
+      <div className="flex-auto m-1 overflow-auto">
         <form autoComplete="off">
-          <div className="flex flex-col my-4">
+          <div className="flex flex-col my-1">
           <p className="text-sm mb-1">Choose which dataset to display</p>
-          <div className="flex mb-3">
+          <div className="flex mb-1">
             <label className="block font-bold w-1/2">
               <input className="mr-2 leading-tight" type="radio" name="dataset" value="e" checked={filters.dataset === 'e'} onChange={(e) => addFilter('dataset', 'e')} />
               <span>Education</span>
@@ -46,8 +46,8 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
               <span>Work</span>
             </label>
           </div>
-          <p className="text-sm mb-1">Outbound/inbound is the direction the commuters are going, if they are going into the area or leaving it</p>
-          <div className="flex mb-3">
+          <p className="text-sm mb-1">Toggle Outbound/inbound commuters</p>
+          <div className="flex mb-1">
             <label className="block font-bold w-1/2">
               <input className="mr-2 leading-tight" type="checkbox" name="inbound" onChange={() => toggle('inbound')} checked={filters.inbound} />
               <span>Inbound</span>
@@ -59,11 +59,6 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
           </div>
         </div>
         </form>
-      </div>
-      <div className="flex-grow-0 mb-3 px-3">
-        <h4 className="text-xl font-semibold">{activeFeature.name}</h4>
-        {/* <button className={clx("font-bold py-2 px-4 rounded hover:bg-blue-700", {'bg-transparent': expanded, 'bg-blue-500': !expanded})} onClick={() => setExpanded(false)}>Chart</button>
-        <button className={clx("font-bold py-2 px-4 mx-4 rounded hover:bg-blue-700", {'bg-transparent': !expanded, 'bg-blue-500': expanded})} onClick={() => setExpanded(true)}>Data Tables</button> */}
       </div>
       <div className="flex-initial">
       {
@@ -77,7 +72,7 @@ const Drawer = ({ activeFeature, filters, setFilters }) => {
           )}
           </>
         ) : (
-          <Chart data={activeFeature.data} dataset={filters.dataset} />
+          <Chart name={activeFeature.name} data={activeFeature.data} dataset={filters.dataset} />
         )
       }
       </div>

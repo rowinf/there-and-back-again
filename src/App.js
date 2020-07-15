@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import ReactMapboxGl, { Layer } from "react-mapbox-gl";
 import { Transition } from 'react-transition-group';
 
+import help1 from './help1.gif';
 import logo from './logo.svg';
 import './App.css';
 import { Drawer } from './Drawer';
@@ -79,6 +80,7 @@ function App() {
   let sa2Attr = filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'
   let [drawer, setDrawer]= useState(false);
   let [zoom, setZoom] = useState([10]);
+  let [resultsTouched, setResultsTouched] = useState(false);
   let [commuterGraphLoaded, setCommuterGraphLoaded] = useState();
   let [educationGraphLoaded, setEducationGraphLoaded] = useState();
   let [center, setCenter] = useState([174.7507971,-36.8916042]);
@@ -287,6 +289,9 @@ function App() {
 
   useEffect(() => {
     emitter.on('overview_results', (r) => {
+      if (r && r.length > 0) {
+        setResultsTouched(true)
+      }
       setFiltered(r);
     });
     return () => {
@@ -335,8 +340,8 @@ function App() {
                   colors={colors} />
                   : null}
               </div>
-              <div className="w-1/3 flex flex-col flex-grow-0 flex-initial">
-                <div style={{height: 300}} className="overflow-auto p-3">
+              <div style={{height: 300}} className="w-1/3 flex flex-col flex-grow-0 flex-initial justify-end">
+                <div className="overflow-auto p-3 flex flex-col items-start">
                   {filtered.length
                     ? filtered.map(f => {
                       let name = sa2NameLookup.current[f]
@@ -357,8 +362,20 @@ function App() {
                         </div>
                       )
                       })
-                    : 'Select a range in the series chart to the left to filter regions here'
-                  }
+                    : null}
+                  </div>
+                  <div className="flex flex-col flex-1 justify-end p-1">
+                    {!filtered.length && !resultsTouched ? (
+                      <div className="flex flex-col justify-end items-start flex-1" style={{height: '70%', width: '70%'}}>
+                      <button className="border-gray-100 border border-1 p-1" onClick={() => setResultsTouched(true)}>Dismiss tip</button>
+                      <img src={help1} alt="Select a range in the series chart to the left to filter regions here" height="250" width="350" />
+                      </div>
+                    ) : null
+                    }
+                    <div className="flex justify-between w-full m-1">
+                      <div className="text-left">Data is owned by Stats NZ</div>
+                      <div className="text-right"><a href="https://github.com/rowinf/there-and-back-again/">View Github</a></div>
+                    </div>
                 </div>
               </div>
             </div>

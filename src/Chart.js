@@ -10,11 +10,11 @@ import 'echarts/lib/component/title';
 import 'echarts/lib/chart/parallel';
 import 'echarts/lib/component/parallelAxis';
 
-const Chart = React.memo(({ data, dataset }) => {
+const Chart = React.memo(({ name, data, dataset }) => {
   let [, ...modeLabels] = data[0].map(d => d[0])
   let option = dataset === 'w' ? {
     title: {
-        text: `Total: ${data.map(d => d[0][1]).reduce((acc, num) => acc + num, 0)}`,
+        text: `${name}: ${data.map(d => d[0][1]).reduce((acc, num) => acc + num, 0)}`,
         left: 'right'
     },
     tooltip: {
