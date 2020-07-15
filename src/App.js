@@ -4,8 +4,6 @@ import { Transition } from 'react-transition-group';
 
 import logo from './logo.svg';
 import './App.css';
-import commuterGraph from './commuter_graph.json';
-import educationGraph from './education_graph.json';
 import { Drawer } from './Drawer';
 import { FetchJson } from './FetchJson';
 import { Overview, emitter } from './Overview';
@@ -81,12 +79,16 @@ function App() {
   let sa2Attr = filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'
   let [drawer, setDrawer]= useState(false);
   let [zoom, setZoom] = useState([10]);
+  let [commuterGraphLoaded, setCommuterGraphLoaded] = useState();
+  let [educationGraphLoaded, setEducationGraphLoaded] = useState();
   let [center, setCenter] = useState([174.7507971,-36.8916042]);
   let [filtered, setFiltered] = useState([]);
   let [centroids, setCentroids] = useState([]);
   let mapRef = useRef();
   let sa2NameLookup = useRef({});
   let sa2CentroidLookup = useRef({});
+  let commuterGraph = useRef();
+  let educationGraph = useRef();
   let onCentroidsLoaded = useCallback((json) => {
     sa2NameLookup.current = json.features.reduce((acc, centroid) => {
       acc[centroid.properties['SA22018_V1_00']] = centroid.properties['SA22018_V1_NAME']
@@ -99,6 +101,14 @@ function App() {
     }, {});
     setCentroids(true)
   }, [])
+  let onCommuterGraphLoaded = useCallback((json) => {
+    commuterGraph.current = json;
+    setCommuterGraphLoaded(true);
+  }, [])
+  let onEducationGraphLoaded = useCallback((json) => {
+    educationGraph.current = json;
+    setEducationGraphLoaded(true);
+  }, [])
 
   let onMapLoad = useCallback((map) => {
       mapRef.current = map;
@@ -108,10 +118,6 @@ function App() {
         'generateId': true
       });
 
-      map.addSource('graph', {
-        type: 'geojson',
-        data: commuterGraph,
-      });
       setMaploaded(true);
       map.addLayer(
         {
@@ -142,7 +148,7 @@ function App() {
     }, []);
     let features = useMemo(() => {
       if (!activeFeatureId) return empty;
-      let {features} = filters.dataset === 'e' ? educationGraph : commuterGraph;
+      let {features} = filters.dataset === 'e' ? educationGraph.current : commuterGraph.current;
       let edges = features.filter(feat => {
         return (feat.properties.sa22018_v1 === Number(activeFeatureId)) || (feat.properties[sa2Attr] === Number(activeFeatureId))
       }).map(edge => ({
@@ -216,10 +222,18 @@ function App() {
     //   }
     // }, [activeFeatureId, bikeRadius, eBikeRadius, walkRadius]);
   useEffect(() => {
-    if (maploaded && centroids) {
+    if (maploaded && centroids && commuterGraphLoaded && educationGraphLoaded) {
       setLoaded(true)
     }
-  }, [centroids, maploaded])
+  }, [centroids, commuterGraphLoaded, educationGraphLoaded, maploaded]);
+  useEffect(() => {
+    if (maploaded && commuterGraphLoaded) {
+      mapRef.current.addSource('graph', {
+        type: 'geojson',
+        data: commuterGraph.current,
+      });
+    }
+  }, [commuterGraphLoaded, maploaded]);
   useEffect(() => {
     if (loaded) {
       mapRef.current.on('mousemove', 'hover-layer', function(e) {
@@ -313,12 +327,14 @@ function App() {
             </Map>
             <div className="absolute left-0 right-0 bottom-0 flex">
               <div className="w-2/3">
+                {commuterGraphLoaded && educationGraphLoaded ?
                 <Overview
-                  data={filters.dataset === 'w' ? commuterGraph.features : educationGraph.features}
+                  data={filters.dataset === 'w' ? commuterGraph.current.features : educationGraph.current.features}
                   featureMap={filters.dataset === 'w' ? workFeatureMap : educationFeatureMap}
                   sa2Attr={filters.dataset === 'w' ? 'sa2_code_w' : 'sa2_code_e'}
                   colors={colors} />
-                </div>
+                  : null}
+              </div>
               <div className="w-1/3 flex flex-col flex-grow-0 flex-initial">
                 <div style={{height: 300}} className="overflow-auto p-3">
                   {filtered.length
@@ -347,6 +363,8 @@ function App() {
               </div>
             </div>
             <FetchJson url="https://gist.githubusercontent.com/rowinf/0dc4187273028359193dd68cb8299209/raw/65f59fde8c750f512bf2bf1a1587debe90c4c827/sa2-centroids.geojson" onSuccess={onCentroidsLoaded} />
+            <FetchJson url="https://gist.githubusercontent.com/rowinf/f1a3e8489da942f3c1ba1e8e7ef0d323/raw/c541c3fcfcce9b8b4d96dc4cf1d79bc9e1569345/commuter_graph.geojson" onSuccess={onCommuterGraphLoaded} />
+            <FetchJson url="https://gist.githubusercontent.com/rowinf/ee0b4529615f74140bacd5954d5a0016/raw/8c85afd547b8652737fcf32f64b13075a0945f6d/education_graph.geojson" onSuccess={onEducationGraphLoaded} />
             <div className="transition ease-in-out duration-300 overflow-y-auto" style={{...defaultStyle, ...transitionDrawerStyles[state]}}>
               {activeFeature && <Drawer activeFeature={activeFeature} filters={filters} setFilters={setFilters} />}
               <button className="absolute top-0 right-0 font-bold py-2 px-4 rounded inline-flex items-center" onClick={() => setDrawer(false)}>
