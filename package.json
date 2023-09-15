@@ -32,7 +32,7 @@
   },
   "scripts": {
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
+    "deploy": "gh-pages -d docs",
     "build:style": "tailwind build src/styles/index.css -o src/styles/tailwind.css",
     "start": "NODE_OPTIONS=--openssl-legacy-provider npm run build:style && react-scripts start",
     "build": "NODE_OPTIONS=--openssl-legacy-provider BUILD_PATH='./docs' react-scripts build",
