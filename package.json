@@ -25,10 +25,10 @@
     "postcss-cli": "^7.1.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-mapbox-gl": "^4.8.6",
-    "react-scripts": "3.4.1",
+    "react-mapbox-gl": "^5.1.1",
+    "react-scripts": "^5.0.1",
     "react-transition-group": "^4.4.1",
-    "tailwindcss": "^1.4.6"
+    "tailwindcss": "^1.9.6"
   },
   "scripts": {
     "predeploy": "npm run build",
@@ -53,5 +53,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "jest-canvas-mock": "^2.5.2",
+    "postcss-flexbugs-fixes": "^5.0.2",
+    "postcss-normalize": "^10.0.1",
+    "postcss-preset-env": "^9.1.3"
   }
 }
