@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/there-and-back-again/static/css/main.e9914db8.css",
+    "main.js": "/there-and-back-again/static/js/main.e1d4f5ab.js",
+    "static/media/help1.gif": "/there-and-back-again/static/media/help1.bade2a2c67a5eb1487ea.gif",
+    "static/media/logo.svg": "/there-and-back-again/static/media/logo.103b5fa18196d5665a7e12318285c916.svg",
+    "index.html": "/there-and-back-again/index.html",
+    "main.e9914db8.css.map": "/there-and-back-again/static/css/main.e9914db8.css.map",
+    "main.e1d4f5ab.js.map": "/there-and-back-again/static/js/main.e1d4f5ab.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e9914db8.css",
+    "static/js/main.e1d4f5ab.js"
+  ]
+}
